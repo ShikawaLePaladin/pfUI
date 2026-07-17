@@ -30,6 +30,13 @@ First release of the **ShikawaLePaladin** continuation of the fork (the previous
   is a SavedVariable) with its own `new_module_positions`.
 - Reminder text now points to the real profile menu path (Settings → General → Profile).
 
+**🎯 New module: Trinket Bar (trinketbar.lua)**
+- A small **movable bar showing your two equipped trinkets** with a live cooldown
+  swipe, click-to-use, and hover tooltip. Off by default; enable via
+  *Unit Frames → General → Trinket Bar Settings*. Uses stock 1.12 inventory API
+  (works with or without DLLs) and inherits pfUI's cooldown text/styling; cooldown
+  stays millisecond-accurate through Nampower when present.
+
 **🔌 DLL capability tooling (superwow.lua)**
 - `/pfdll` now **probes and reports the individual API surfaces** each mod exposes
   (SuperWoW 2.x: `UnitNameplate`, `CursorPosition`, `GetSpeed`, `CanLootUnit`, …;
