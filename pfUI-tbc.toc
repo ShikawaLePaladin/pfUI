@@ -1,9 +1,9 @@
 ## Interface: 20400
 ## Title: |cff33ffccpf|cffffffffUI
-## Author: Shagu - modfied by me0wg4ming
+## Author: Shagu - modified by me0wg4ming, continued by ShikawaLePaladin
 ## Notes: A complete user interface replacement.
 ## Notes-ruRU: Полная замена пользовательского интерфейса.
-## Version: 8.3.0
+## Version: 8.4.0
 ## SavedVariables: pfUI_profiles, pfUI_addon_profiles, pfUI_cache, pfUI_throttle
 ## SavedVariablesPerCharacter: pfUI_config, pfUI_init, pfUI_playerDB
 
