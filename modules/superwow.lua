@@ -2,16 +2,42 @@
 -- https://github.com/balakethelock/SuperWoW
 
 -- DLL Status Check Command (always available)
+-- Probes which client mods are loaded AND which specific API surfaces they expose,
+-- so it also answers "does this server (e.g. OctoWoW) actually allow SuperWoW /
+-- UnitXP?" - just run /pfdll in-game and read the capability list.
 SLASH_PFDLLSTATUS1 = "/pfdll"
 SlashCmdList["PFDLLSTATUS"] = function()
   local chat = DEFAULT_CHAT_FRAME
+
+  -- Report a list of "FeatureName -> function-exists" as green/red lines.
+  local function reportCaps(probes)
+    for _, probe in ipairs(probes) do
+      local present = probe[2] ~= nil
+      chat:AddMessage(string.format("    %s%s|r: %s",
+        present and "|cff00ff00" or "|cff888888", probe[1],
+        present and "yes" or "no"))
+    end
+  end
+
   chat:AddMessage("|cff33ffccpfUI|r: DLL Status Check")
 
   -- SuperWoW
   if SUPERWOW_VERSION then
     chat:AddMessage("  |cff00ff00SuperWoW|r: v" .. tostring(SUPERWOW_VERSION))
+    -- Probe 2.x-era additions (see wiki: balakethelock/SuperWoW). Missing ones
+    -- simply mean an older SuperWoW build; pfUI feature-detects each anyway.
+    reportCaps({
+      { "UnitNameplate (nameplate frame access)", UnitNameplate },
+      { "CursorPosition (world coords)",           CursorPosition },
+      { "GetSpeed (run/swim speed)",               GetSpeed },
+      { "CanLootUnit",                             CanLootUnit },
+      { "SetMouseoverUnit",                        SetMouseoverUnit },
+      { "GetWeaponEnchantID",                      GetWeaponEnchantID },
+      { "TrackUnit (minimap tracking)",            TrackUnit },
+      { "Clickthrough",                            Clickthrough },
+    })
   elseif SpellInfo or SetAutoloot then
-    chat:AddMessage("  |cffffff00SuperWoW|r: Detected (old version)")
+    chat:AddMessage("  |cffffff00SuperWoW|r: Detected (old version, no SUPERWOW_VERSION)")
   else
     chat:AddMessage("  |cffff0000SuperWoW|r: Not detected")
   end
@@ -19,8 +45,23 @@ SlashCmdList["PFDLLSTATUS"] = function()
   -- Nampower
   if GetNampowerVersion then
     chat:AddMessage("  |cff00ff00Nampower|r: v" .. tostring(GetNampowerVersion()))
+    reportCaps({
+      { "GetSpellRec (spell DB)",        GetSpellRec },
+      { "GetUnitField (direct memory)",  GetUnitField },
+      { "GetSpellIdCooldown (precise)",  GetSpellIdCooldown },
+      { "GetSpellModifiers",             GetSpellModifiers },
+      { "GetTrinkets",                   GetTrinkets },
+      { "IsSpellUsable (reactive)",      IsSpellUsable },
+    })
   else
-    chat:AddMessage("  |cffff0000Nampower|r: Not detected")
+    chat:AddMessage("  |cffff0000Nampower|r: Not detected (REQUIRED - most features disabled)")
+  end
+
+  -- UnitXP_SP3
+  if UnitXP then
+    chat:AddMessage("  |cff00ff00UnitXP_SP3|r: detected (precise range / line-of-sight)")
+  else
+    chat:AddMessage("  |cff888888UnitXP_SP3|r: not detected (optional)")
   end
 
   -- Check if castbar exists for indicator positioning
@@ -234,6 +275,38 @@ pfUI:RegisterModule("superwow", "vanilla", function ()
           offHandCharges = offHandCharges,
         }
       end
+    end
+  end
+
+  -- Nameplate spread control (SuperWoW 2.0+)
+  -- SuperWoW 2.0 adds the NameplateMotion CVar which lets the client spread
+  -- overlapping nameplates apart instead of stacking them. We gate this behind
+  -- UnitNameplate (a 2.0-era function) as a proxy for "SuperWoW is new enough",
+  -- and expose a slash command to cycle the modes. SetCVar persists across sessions,
+  -- so no SavedVariable is needed. Feature stays fully absent on older/no SuperWoW.
+  if UnitNameplate then
+    local NP_MODES = {
+      [0] = "Overlap (stacked)",
+      [1] = "Default spread",
+      [2] = "Smart spread",
+      [3] = "Compact spread",
+    }
+
+    SLASH_PFNAMEPLATESPREAD1 = "/pfnpspread"
+    SLASH_PFNAMEPLATESPREAD2 = "/pfnameplatespread"
+    SlashCmdList["PFNAMEPLATESPREAD"] = function(msg)
+      local arg = tonumber(msg)
+      local cur = tonumber(GetCVar("NameplateMotion")) or 1
+      local target
+      if arg and NP_MODES[arg] then
+        target = arg
+      else
+        -- No/invalid argument: cycle to the next mode.
+        target = math.mod(cur + 1, 4)
+      end
+      SetCVar("NameplateMotion", target)
+      DEFAULT_CHAT_FRAME:AddMessage("|cff33ffccpfUI|r: Nameplate motion -> |cffffffaa"
+        .. target .. "|r (" .. (NP_MODES[target] or "?") .. ")")
     end
   end
 
