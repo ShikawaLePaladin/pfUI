@@ -127,65 +127,61 @@ pfUI:RegisterModule("firstrun", "vanilla:tbc", function ()
   end)
 
   -- choose profile
+  -- The list of built-in design profiles offered by the wizard. This is
+  -- data-driven so adding a new prebuilt theme only requires:
+  --   1. defining it in env/profiles.lua (pfUI_profiles["Name"])
+  --   2. appending its key to this list
+  -- The grid below lays the buttons out automatically (2 columns, top-to-bottom),
+  -- so the window resizes to fit however many themes are listed here.
+  local firstrun_profiles = { "Modern", "Slim", "Nostalgia", "Legacy", "Adapta", "Light", "Carbon" }
+
   pfUI.firstrun:AddStep("profile", function()
     local f = CreateFirstRunPage()
-    f.text:SetText(T["A new installation of |cff33ffccpf|rUI ships with 4 prebuilt design profiles. Click below if you wish to load one of these profiles."])
 
-    f.Modern = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.Modern:SetWidth(120)
-    f.Modern:SetHeight(20)
-    f.Modern:SetPoint("BOTTOM", -65, 100)
-    f.Modern:SetTextColor(1,1,1)
-    f.Modern:SetText("Modern")
-    f.Modern:SetScript("OnClick", function()
-      _G["pfUI_config"] = CopyTable(pfUI_profiles["Modern"])
-      pfUI_init.selected_profile = "Modern"
-      pfUI:LoadConfig()
-      ReloadUI()
-    end)
-    SkinButton(f.Modern)
+    -- Grid geometry
+    local cols = 2
+    local btnW, btnH = 120, 20
+    local hgap, vgap = 12, 6
+    local count = table.getn(firstrun_profiles)
+    local rows = math.ceil(count / cols)
 
-    f.Nostalgia = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.Nostalgia:SetWidth(120)
-    f.Nostalgia:SetHeight(20)
-    f.Nostalgia:SetPoint("BOTTOM", 65, 100)
-    f.Nostalgia:SetTextColor(1,1,1)
-    f.Nostalgia:SetText("Nostalgia")
-    f.Nostalgia:SetScript("OnClick", function()
-      _G["pfUI_config"] = CopyTable(pfUI_profiles["Nostalgia"])
-      pfUI_init.selected_profile = "Nostalgia"
-      pfUI:LoadConfig()
-      ReloadUI()
-    end)
-    SkinButton(f.Nostalgia)
+    -- Reserve vertical room: the scale slider sits at y=50 and the grid stacks
+    -- upward from y=86. Grow the window so the description text never overlaps.
+    local gridBottom = 86
+    local gridTop = gridBottom + rows * (btnH + vgap)
+    f:SetHeight(math.max(180, gridTop + 76))
 
-    f.Legacy = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.Legacy:SetWidth(120)
-    f.Legacy:SetHeight(20)
-    f.Legacy:SetPoint("BOTTOM", 65, 75)
-    f.Legacy:SetTextColor(1,1,1)
-    f.Legacy:SetText("Legacy")
-    f.Legacy:SetScript("OnClick", function()
-      _G["pfUI_config"] = CopyTable(pfUI_profiles["Legacy"])
-      pfUI_init.selected_profile = "Legacy"
-      pfUI:LoadConfig()
-      ReloadUI()
-    end)
-    SkinButton(f.Legacy)
+    -- Keep the description text pinned to the top band above the grid.
+    f.text:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -10, gridTop + 8)
+    f.text:SetText(T["A new installation of |cff33ffccpf|rUI ships with several prebuilt design profiles. Click one below to load it, or hit \"Next\" to keep the defaults. You can switch or create your own profile any time via |cffffffaa/pfui|r > Settings > General > Profile."])
 
-    f.Slim = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.Slim:SetWidth(120)
-    f.Slim:SetHeight(20)
-    f.Slim:SetPoint("BOTTOM", -65, 75)
-    f.Slim:SetTextColor(1,1,1)
-    f.Slim:SetText("Slim")
-    f.Slim:SetScript("OnClick", function()
-      _G["pfUI_config"] = CopyTable(pfUI_profiles["Slim"])
-      pfUI_init.selected_profile = "Slim"
-      pfUI:LoadConfig()
-      ReloadUI()
-    end)
-    SkinButton(f.Slim)
+    -- Build the theme buttons from firstrun_profiles.
+    f.profileButtons = {}
+    for i = 1, count do
+      local name = firstrun_profiles[i]
+      local idx0 = i - 1
+      local col = math.mod(idx0, cols)
+      local rowFromTop = math.floor(idx0 / cols)
+      local rowFromBottom = (rows - 1) - rowFromTop
+
+      local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+      btn:SetWidth(btnW)
+      btn:SetHeight(btnH)
+      local xoff = (col == 0) and -(btnW/2 + hgap/2) or (btnW/2 + hgap/2)
+      local yoff = gridBottom + rowFromBottom * (btnH + vgap)
+      btn:SetPoint("BOTTOM", xoff, yoff)
+      btn:SetTextColor(1,1,1)
+      btn:SetText(name)
+      btn:SetScript("OnClick", function()
+        if not pfUI_profiles[name] then return end
+        _G["pfUI_config"] = CopyTable(pfUI_profiles[name])
+        pfUI_init.selected_profile = name
+        pfUI:LoadConfig()
+        ReloadUI()
+      end)
+      SkinButton(btn)
+      f.profileButtons[name] = btn
+    end
 
     f.Slider = CreateFrame("Slider", "pfFirstRunWizardScaleSlider", f, "OptionsSliderTemplate")
     f.Slider.text = f.Slider:CreateFontString("Status", "LOW", "GameFontWhite")

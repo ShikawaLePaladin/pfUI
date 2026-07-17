@@ -1126,19 +1126,21 @@ Master uses **none** of these - it relies on:
 ### Requirements
 
 **REQUIRED:**
-- SuperWoW DLL
-- Nampower DLL
+- [Nampower DLL](https://gitea.com/avitasia/nampower) (3.0.0+) — all cast/aura/spell tracking runs through its API
 
-**Optional but Recommended:**
-- UnitXP_SP3 DLL (for accurate XP tracking)
+**Optional (enhances features when present, gracefully disabled when absent):**
+- [SuperWoW DLL](https://github.com/balakethelock/SuperWoW) — enables extra unit tokens (`mark1-8`, `owner`), unit tracking on the minimap, clickthrough looting, local raid markers, and richer NPC/other-player cast data. Since 8.0.0 it is **no longer a hard dependency**; every SuperWoW code path is feature-detected and simply stays off if the DLL isn't loaded.
+- [UnitXP_SP3 DLL](https://codeberg.org/konaka/UnitXP_SP3) — precise range/distance and line-of-sight checks.
+
+> **Note:** on private servers (e.g. OctoWoW), only DLLs the server explicitly permits will load. Nampower is the only one pfUI hard-requires; SuperWoW and UnitXP just add optional polish.
 
 ### Steps
 
-1. Install SuperWoW + Nampower
-2. Download pfUI Experiment build
+1. Install Nampower (SuperWoW / UnitXP_SP3 optional)
+2. Download this pfUI build
 3. Extract to `Interface/AddOns/pfUI`
 4. `/reload`
-5. Check for errors in console
+5. Check for errors in console (and run `/pfdll` to see which DLLs were detected)
 
 ### Verification
 

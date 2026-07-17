@@ -902,12 +902,142 @@ local adapta = {
   },
 }
 
+-- Carbon
+-- A dark, high-contrast, near-borderless theme derived from the Slim layout.
+-- Backgrounds are near-black, borders are thin and neutral, text stays bright
+-- white for maximum readability. Meant as a clean modern dark alternative.
+local carbon = {
+  ["panel"] = {
+    ["use_unitfonts"] = "1",
+  },
+  ["tooltip"] = {
+    ["position"] = "bottom",
+  },
+  ["appearance"] = {
+    ["infight"] = {
+      ["screen"] = "0",
+      ["common"] = "1",
+    },
+    ["border"] = {
+      ["color"] = "0.1,0.1,0.1,1",
+      ["bags"] = "2",
+      ["panels"] = "1",
+      ["unitframes"] = "1",
+      ["default"] = "1",
+      ["background"] = "0.04,0.04,0.04,0.92",
+      ["chat"] = "1",
+      ["actionbars"] = "1",
+    },
+  },
+  ["buffbar"] = {
+    ["pdebuff"] = {
+      ["enable"] = "1",
+      ["height"] = "14",
+    },
+    ["pbuff"] = {
+      ["enable"] = "1",
+      ["height"] = "14",
+    },
+    ["tdebuff"] = {
+      ["enable"] = "1",
+      ["height"] = "14",
+      ["selfdebuff"] = "1",
+    },
+  },
+  ["chat"] = {
+    ["global"] = {
+      ["tabmouse"] = "1",
+      ["tabdock"] = "0",
+      ["border"] = "0.1,0.1,0.1,1",
+      ["background"] = "0.04,0.04,0.04,0.5",
+      ["custombg"] = "1",
+    },
+    ["text"] = {
+      ["outline"] = "1",
+    },
+    ["left"] = {
+      ["height"] = "160",
+      ["width"] = "405",
+    },
+    ["right"] = {
+      ["height"] = "160",
+      ["width"] = "405",
+    },
+  },
+  ["bars"] = {
+    ["background"] = "0",
+    ["icon_size"] = "22",
+  },
+  ["nameplates"] = {
+    ["use_unitfonts"] = "1",
+  },
+  ["unitframes"] = {
+    ["custombg"] = "1",
+    ["custombgcolor"] = "0.04,0.04,0.04,1",
+    ["customcolor"] = "0.1,0.1,0.1,1",
+    ["custom"] = "1",
+    ["target"] = {
+      ["buffsize"] = "14",
+      ["pheight"] = "6",
+      ["height"] = "35",
+      ["panchor"] = "TOPLEFT",
+      ["pspace"] = "-1",
+      ["width"] = "225",
+    },
+    ["pet"] = {
+      ["debuffs"] = "top",
+      ["pheight"] = "6",
+      ["pspace"] = "-1",
+      ["width"] = "125",
+    },
+    ["player"] = {
+      ["buffsize"] = "14",
+      ["txthpleft"] = "powerdyn",
+      ["height"] = "35",
+      ["showPVP"] = "1",
+      ["panchor"] = "TOPRIGHT",
+      ["pspace"] = "-1",
+      ["width"] = "225",
+      ["pheight"] = "6",
+    },
+    ["focus"] = {
+      ["pheight"] = "6",
+    },
+    ["raid"] = {
+      ["height"] = "24",
+      ["width"] = "48",
+    },
+    ["ttarget"] = {
+      ["portrait"] = "off",
+      ["pheight"] = "6",
+      ["height"] = "16",
+      ["pspace"] = "-1",
+      ["width"] = "125",
+    },
+    ["tttarget"] = {
+      ["portrait"] = "off",
+      ["pheight"] = "6",
+      ["height"] = "16",
+      ["pspace"] = "-1",
+      ["width"] = "125",
+    },
+    ["ptarget"] = {
+      ["portrait"] = "off",
+      ["pheight"] = "-1",
+      ["height"] = "8",
+      ["pspace"] = "-1",
+      ["width"] = "125",
+    },
+  },
+}
+
 -- assign profiles to userdata
 pfUI_profiles["Modern"] = modern
 pfUI_profiles["Nostalgia"] = nostalgia
 pfUI_profiles["Legacy"] = legacy
 pfUI_profiles["Adapta"] = adapta
 pfUI_profiles["Slim"] = slim
+pfUI_profiles["Carbon"] = carbon
 
 -- Default positions for new modules per profile.
 -- These are applied during firstrun so frames don't spawn in the center of screen.
@@ -932,9 +1062,14 @@ pfUI_profiles["Slim"].new_module_positions = {
   pfMarkTracking       = { anchor = "LEFT",   parent = "UIParent", xpos = 2,    ypos = -82 },
 }
 pfUI_profiles["Adapta"].new_module_positions = pfUI_profiles["Modern"].new_module_positions
+pfUI_profiles["Carbon"].new_module_positions = pfUI_profiles["Slim"].new_module_positions
 
 
 -- overwrite core profiles in userdata
+-- pfUI_profiles is a SavedVariable, so on load the global is replaced by the
+-- on-disk table. We re-assert every built-in profile here (after VARIABLES_LOADED)
+-- so shipped themes always reflect their current code definition. Any NEW built-in
+-- theme MUST be listed here or it will not survive for players with saved profiles.
 local profile_loader = CreateFrame("Frame")
 profile_loader:RegisterEvent("VARIABLES_LOADED")
 profile_loader:SetScript("OnEvent", function()
@@ -944,5 +1079,6 @@ profile_loader:SetScript("OnEvent", function()
   pfUI_profiles["Adapta"] = adapta
   pfUI_profiles["Light"] = light
   pfUI_profiles["Slim"] = slim
+  pfUI_profiles["Carbon"] = carbon
   this:UnregisterAllEvents()
 end)
