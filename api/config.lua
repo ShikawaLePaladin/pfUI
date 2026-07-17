@@ -892,6 +892,7 @@ function pfUI:LoadConfig()
   pfUI:UpdateConfig("nameplates", nil,           "debufftimers",     "1")
   pfUI:UpdateConfig("nameplates", nil,           "debufftext",       "1")
   pfUI:UpdateConfig("nameplates", nil,           "debuffanim",       "0")
+  pfUI:UpdateConfig("nameplates", nil,           "lootable",         "0")
 
   pfUI:UpdateConfig("abuttons",   nil,           "enable",           "1")
   pfUI:UpdateConfig("abuttons",   nil,           "position",         "bottom")

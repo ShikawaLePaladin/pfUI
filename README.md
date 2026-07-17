@@ -37,6 +37,12 @@ First release of the **ShikawaLePaladin** continuation of the fork (the previous
   (works with or without DLLs) and inherits pfUI's cooldown text/styling; cooldown
   stays millisecond-accurate through Nampower when present.
 
+**🟡 Nameplates: lootable indicator (nameplates.lua)**
+- Optional small coin icon on the nameplate of any **lootable corpse**, via SuperWoW 2.0's
+  `CanLootUnit`. Handy for farming/skinning. Off by default; enable under *Nameplates*.
+  Throttled (~0.4s/plate) and wrapped in `pcall`, feature-detected — completely inert
+  without SuperWoW 2.0.
+
 **🔌 DLL capability tooling (superwow.lua)**
 - `/pfdll` now **probes and reports the individual API surfaces** each mod exposes
   (SuperWoW 2.x: `UnitNameplate`, `CursorPosition`, `GetSpeed`, `CanLootUnit`, …;
