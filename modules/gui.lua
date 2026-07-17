@@ -2162,6 +2162,10 @@ pfUI:RegisterModule("gui", "vanilla:tbc", function ()
       CreateConfig(nil, T["Show Reactive Spell Indicator"], C.unitframes, "reactive_indicator", "checkbox", nil, nil, nil, nil, "vanilla" )
       CreateConfig(nil, T["Reactive Indicator Size"], C.unitframes, "reactive_size", nil, nil, nil, nil, nil, "vanilla" )
 
+      CreateConfig(nil, T["Trinket Bar Settings"], nil, nil, "header")
+      CreateConfig(nil, T["Show Trinket Bar"], C.unitframes, "trinketbar", "checkbox", nil, nil, nil, nil, "vanilla" )
+      CreateConfig(nil, T["Trinket Bar Icon Size"], C.unitframes, "trinketbar_size", nil, nil, nil, nil, nil, "vanilla" )
+
       CreateConfig(nil, T["UnitXP Settings"], nil, nil, "header")
       CreateConfig(nil, T["Font Size for all UnitXP texts"], C.unitframes, "unitxp_font_size", nil, nil, nil, nil, nil, "vanilla" )
       CreateConfig(nil, T["Show Line of Sight Indicator"], C.unitframes, "los_indicator", "checkbox", nil, nil, nil, nil, "vanilla" )

@@ -274,6 +274,8 @@ function pfUI:LoadConfig()
   pfUI:UpdateConfig("unitframes", nil,           "reactive_indicator", "0")
   pfUI:UpdateConfig("unitframes", nil,           "reactive_size",    "28")
   pfUI:UpdateConfig("unitframes", nil,           "damage_tracking",  "0")
+  pfUI:UpdateConfig("unitframes", nil,           "trinketbar",       "0")
+  pfUI:UpdateConfig("unitframes", nil,           "trinketbar_size",  "32")
 
   -- UnitXP Settings
   pfUI:UpdateConfig("unitframes", nil,           "unitxp_font_size",    "13")
