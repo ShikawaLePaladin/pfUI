@@ -2434,6 +2434,11 @@ pfUI:RegisterModule("gui", "vanilla:tbc", function ()
       CreateConfig(nil, T["Random Roll Announcement Rarity"], C.loot, "rollannouncequal", "dropdown", pfUI.gui.dropdowns.loot_rarity)
       CreateConfig(nil, T["Detailed Random Roll Announcement"], C.loot, "rollannounce", "checkbox")
       CreateConfig(nil, T["Use Item Rarity Color For Loot-Roll Timer"], C.loot, "raritytimer", "checkbox")
+
+      CreateConfig(nil, T["Loot Council Settings"], nil, nil, "header")
+      CreateConfig(nil, T["Enable Loot Council Roll Coordinator (SR/MS/OS/Transmog)"], C.loot.council, "enable", "checkbox")
+      CreateConfig(nil, T["Roll Duration (seconds)"], C.loot.council, "duration")
+      CreateConfig(nil, T["Auto-Close After Roll"], C.loot.council, "autoclose", "checkbox")
     end)
 
     CreateGUIEntry(T["Minimap"], T["Minimap"], function()

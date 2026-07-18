@@ -319,4 +319,262 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       pfUI.roll.frames[i]:Hide()
     end
   end
+
+  -- ===========================================================================
+  -- Loot Council Roll Coordinator (SR / MS / OS / Transmog)
+  -- Ported from the standalone "LootBlare" addon. This is UNRELATED to the
+  -- native Need/Greed/Pass popup above: some guilds/raids distribute loot via
+  -- manual "/roll" with specific number ranges standing for different
+  -- categories (Soft-Reserve, Main-Spec, Off-Spec, Transmog) instead of
+  -- Blizzard's native group loot roll. Off by default - opt in via Loot settings.
+  -- ===========================================================================
+  if C.loot.council.enable == "1" then
+    local council = {}
+    pfUI.lootcouncil = council
+
+    local CAP_ORDER = { "SR", "MS", "OS", "TM" }
+    local CAPS = {
+      SR = { max = 101, color = {1, .2, .2} },
+      MS = { max = 100, color = {1, 1, .2} },
+      OS = { max = 99,  color = {.2, 1, .2} },
+      TM = { max = 50,  color = {.2, 1, 1} },
+    }
+
+    local PREFIX = "pfUILootCouncil"
+    local MSG_GET_DATA = "GET_ML"
+    local MSG_SET_ML = "SET_ML:"
+    local MSG_SET_TIME = "SET_TIME:"
+
+    council.rolls = { SR = {}, MS = {}, OS = {}, TM = {} }
+    council.rollers = {}
+    council.isRolling = false
+    council.masterLooter = nil
+    council.itemLink = nil
+    council.timeElapsed = 0
+
+    local function ResetRolls()
+      council.rolls = { SR = {}, MS = {}, OS = {}, TM = {} }
+      council.rollers = {}
+    end
+
+    local function SortRolls()
+      for _, cap in ipairs(CAP_ORDER) do
+        table.sort(council.rolls[cap], function(a, b) return a.roll > b.roll end)
+      end
+    end
+
+    -- Uses the real RAID_CLASS_COLORS (fileName-keyed, e.g. "WARRIOR"), unlike
+    -- the original addon's own hardcoded English-only class-name color table
+    -- which broke on non-English clients.
+    local function ClassColor(fileName)
+      local c = RAID_CLASS_COLORS[fileName]
+      return c.r, c.g, c.b
+    end
+
+    local function IsMasterLooter(name)
+      local method, mlPartyID = GetLootMethod()
+      if method ~= "master" or not mlPartyID then return false end
+      if mlPartyID == 0 then return name == UnitName("player") end
+      return UnitName("party" .. mlPartyID) == name
+    end
+
+    local function ExtractItemLink(message)
+      local _, _, link = string.find(message, "|c.-|H(item:.-)|h.-|h|r")
+      return link
+    end
+
+    -- main frame
+    local f = CreateFrame("Frame", "pfLootCouncilFrame", UIParent)
+    f:SetWidth(200)
+    f:SetHeight(230)
+    f:SetPoint("CENTER", 0, 0)
+    CreateBackdrop(f, nil, nil, .9)
+    CreateBackdropShadow(f)
+    f:Hide()
+    UpdateMovable(f, true)
+
+    f.close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    f.close:SetPoint("TOPRIGHT", 2, 2)
+    f.close:SetScript("OnClick", function()
+      f:Hide()
+      ResetRolls()
+    end)
+
+    f.icon = CreateFrame("Button", nil, f)
+    f.icon:SetWidth(36)
+    f.icon:SetHeight(36)
+    f.icon:SetPoint("TOP", 0, -10)
+    f.icon.tex = f.icon:CreateTexture(nil, "ARTWORK")
+    f.icon.tex:SetAllPoints(f.icon)
+    f.icon.tex:SetTexCoord(.08, .92, .08, .92)
+    CreateBackdrop(f.icon)
+
+    f.icon:SetScript("OnEnter", function()
+      if not council.itemLink then return end
+      GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+      GameTooltip:SetHyperlink(council.itemLink)
+      GameTooltip:Show()
+    end)
+    f.icon:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f.icon:SetScript("OnClick", function()
+      if not council.itemLink then return end
+      if IsControlKeyDown() then
+        DressUpItemLink(council.itemLink)
+      elseif IsShiftKeyDown() and ChatFrameEditBox and ChatFrameEditBox:IsVisible() then
+        ChatFrameEditBox:Insert(council.itemLink)
+      end
+    end)
+
+    f.name = f:CreateFontString(nil, "OVERLAY")
+    f.name:SetPoint("TOP", f.icon, "BOTTOM", 0, -6)
+    f.name:SetFont(pfUI.font_default, C.global.font_size, "OUTLINE")
+
+    f.timer = f:CreateFontString(nil, "OVERLAY")
+    f.timer:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -8)
+    f.timer:SetFont(pfUI.font_default, tonumber(C.global.font_size) + 6, "OUTLINE")
+
+    f.rolls = f:CreateFontString(nil, "OVERLAY")
+    f.rolls:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -80)
+    f.rolls:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 36)
+    f.rolls:SetJustifyH("LEFT")
+    f.rolls:SetJustifyV("TOP")
+    f.rolls:SetFont(pfUI.font_default, C.global.font_size, "OUTLINE")
+
+    local buttons = {}
+    for i, cap in ipairs(CAP_ORDER) do
+      local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+      b:SetWidth(40)
+      b:SetHeight(20)
+      b:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 8 + (i-1)*44, 8)
+      b:SetText(cap)
+      b:SetScript("OnClick", function() RandomRoll(1, CAPS[cap].max) end)
+      b:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_TOP")
+        GameTooltip:SetText(T["Roll for"] .. " " .. cap)
+        GameTooltip:Show()
+      end)
+      b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+      SkinButton(b)
+      buttons[cap] = b
+    end
+
+    local function UpdateRollsText()
+      SortRolls()
+      local text = ""
+      local count = 0
+      for _, cap in ipairs(CAP_ORDER) do
+        for _, entry in ipairs(council.rolls[cap]) do
+          if count < 12 then
+            local r, g, b = ClassColor(entry.fileName)
+            local cc = CAPS[cap].color
+            text = text .. string.format("|cff%02x%02x%02x%s|r |cff%02x%02x%02x%s (%d)|r\n",
+              r*255, g*255, b*255, entry.roller,
+              cc[1]*255, cc[2]*255, cc[3]*255, cap, entry.roll)
+            count = count + 1
+          end
+        end
+      end
+      f.rolls:SetText(text)
+    end
+
+    f:SetScript("OnUpdate", function()
+      if not council.isRolling then return end
+      council.timeElapsed = council.timeElapsed + arg1
+      local remaining = (tonumber(C.loot.council.duration) or 15) - council.timeElapsed
+      f.timer:SetText(remaining > 0 and format("%.1f", remaining) or "0.0")
+      if remaining <= 0 then
+        council.isRolling = false
+        if C.loot.council.autoclose == "1" and not (council.masterLooter == UnitName("player")) then
+          f:Hide()
+        end
+      end
+    end)
+
+    local msg = CreateFrame("Frame")
+    msg:RegisterEvent("CHAT_MSG_SYSTEM")
+    msg:RegisterEvent("CHAT_MSG_RAID_WARNING")
+    msg:RegisterEvent("CHAT_MSG_RAID")
+    msg:RegisterEvent("CHAT_MSG_RAID_LEADER")
+    msg:RegisterEvent("CHAT_MSG_ADDON")
+    msg:RegisterEvent("CHAT_MSG_LOOT")
+    msg:RegisterEvent("PLAYER_ENTERING_WORLD")
+    msg:RegisterEvent("PLAYER_LOGOUT")
+    msg:SetScript("OnEvent", function()
+      if event == "PLAYER_LOGOUT" then
+        this:UnregisterAllEvents()
+        this:SetScript("OnEvent", nil)
+        return
+      elseif event == "PLAYER_ENTERING_WORLD" then
+        SendAddonMessage(PREFIX, MSG_GET_DATA, "RAID")
+      elseif event == "CHAT_MSG_SYSTEM" then
+        local _, _, newML = string.find(arg1, "(%S+) is now the loot master")
+        if newML then
+          council.masterLooter = newML
+          if newML == UnitName("player") then
+            SendAddonMessage(PREFIX, MSG_SET_ML .. newML, "RAID")
+            SendAddonMessage(PREFIX, MSG_SET_TIME .. (C.loot.council.duration or "15"), "RAID")
+          end
+        end
+      elseif event == "CHAT_MSG_RAID_WARNING" then
+        if arg2 == council.masterLooter then
+          local link = ExtractItemLink(arg1)
+          if link
+          and not string.find(arg1, "^No one has nee")
+          and not string.find(arg1, "has been sent to")
+          and not string.find(arg1, " received ") then
+            ResetRolls()
+            council.timeElapsed = 0
+            council.isRolling = true
+            council.itemLink = link
+            local _, _, itemId = string.find(link, "(item:%d+:%d+:%d+:%d+)")
+            local name, _, _, _, _, _, _, _, icon = GetItemInfo(itemId)
+            f.name:SetText(name or UNKNOWN)
+            f.icon.tex:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+            UpdateRollsText()
+            f:Show()
+          end
+        end
+      elseif event == "CHAT_MSG_RAID" or event == "CHAT_MSG_RAID_LEADER" then
+        if council.isRolling and string.find(arg1, "rolls") then
+          local _, _, roller, roll, minRoll, maxRoll = string.find(arg1, "(%S+) rolls (%d+) %((%d+)%-(%d+)%)")
+          if roller and roll and not council.rollers[roller] then
+            council.rollers[roller] = true
+            local fileName
+            for i = 1, GetNumRaidMembers() do
+              local n, _, _, _, _, fn = GetRaidRosterInfo(i)
+              if n == roller then fileName = fn end
+            end
+            for _, cap in ipairs(CAP_ORDER) do
+              if maxRoll == tostring(CAPS[cap].max) then
+                table.insert(council.rolls[cap], { roller = roller, roll = tonumber(roll), fileName = fileName or "WARRIOR" })
+              end
+            end
+            UpdateRollsText()
+          end
+        end
+      elseif event == "CHAT_MSG_LOOT" then
+        if f:IsVisible() and council.masterLooter == UnitName("player") then
+          local link = ExtractItemLink(arg1)
+          if link and link == council.itemLink then
+            ResetRolls()
+            f:Hide()
+          end
+        end
+      elseif event == "CHAT_MSG_ADDON" and arg1 == PREFIX then
+        local message = arg2
+        if message == MSG_GET_DATA and IsMasterLooter(UnitName("player")) then
+          council.masterLooter = UnitName("player")
+          SendAddonMessage(PREFIX, MSG_SET_ML .. council.masterLooter, "RAID")
+          SendAddonMessage(PREFIX, MSG_SET_TIME .. (C.loot.council.duration or "15"), "RAID")
+        elseif string.find(message, MSG_SET_ML) then
+          council.masterLooter = string.sub(message, string.len(MSG_SET_ML) + 1)
+        end
+      end
+    end)
+
+    SLASH_PFLOOTCOUNCIL1 = "/pflootcouncil"
+    SlashCmdList["PFLOOTCOUNCIL"] = function()
+      if f:IsVisible() then f:Hide() else f:Show() end
+    end
+  end
 end)

@@ -30,6 +30,14 @@ First release of the **ShikawaLePaladin** continuation of the fork (the previous
   is a SavedVariable) with its own `new_module_positions`.
 - Reminder text now points to the real profile menu path (Settings → General → Profile).
 
+**🎲 Loot Council Roll Coordinator (roll.lua)**
+- Ported from the standalone LootBlare addon: manual `/roll`-based SR/MS/OS/Transmog
+  loot distribution (as used by guilds that don't rely on Blizzard's native group
+  loot), with master-looter sync across the raid via addon messages. Off by default;
+  enable under *Loot → Loot Council Settings*. Uses the real class-color table
+  (fileName-keyed) instead of the original addon's English-only color table, so it
+  now works correctly on non-English clients too. `/pflootcouncil` toggles the window.
+
 **🎯 New module: Trinket Bar (trinketbar.lua)**
 - A small **movable bar showing your two equipped trinkets** with a live cooldown
   swipe, click-to-use, and hover tooltip. Off by default; enable via
