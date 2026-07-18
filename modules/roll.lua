@@ -397,6 +397,16 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
         if icon then return icon end
       end
       local rets = { GetItemInfo(itemId) }
+
+      -- TEMP DIAGNOSTIC - remove once the icon-resolution issue is understood.
+      -- Dumps every single value GetItemInfo returned, with its type, so we
+      -- stop guessing at which position/format actually holds the icon.
+      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r GetItemIcon exists=" .. tostring(GetItemIcon ~= nil)
+        .. " GetItemInfo returned " .. table.getn(rets) .. " values:")
+      for i = 1, table.getn(rets) do
+        DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r  [" .. i .. "] (" .. type(rets[i]) .. ") " .. tostring(rets[i]))
+      end
+
       for i = 1, table.getn(rets) do
         local v = rets[i]
         if type(v) == "string" and string.find(v, "^Interface\\") then
