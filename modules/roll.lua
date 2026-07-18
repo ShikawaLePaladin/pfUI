@@ -450,7 +450,7 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       b:SetScript("OnClick", function() RandomRoll(1, CAPS[cap].max) end)
       b:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_TOP")
-        GameTooltip:SetText(T["Roll for"] .. " " .. cap)
+        GameTooltip:SetText((T["Roll for"] or "Roll for") .. " " .. (cap or "?"))
         GameTooltip:Show()
       end)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -480,6 +480,26 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
     f:SetScript("OnUpdate", function()
       if not council.isRolling then return end
       council.timeElapsed = council.timeElapsed + arg1
+
+      -- Freshly-seen items are not always cached client-side yet: GetItemInfo
+      -- returns nil name/icon until the client finishes an async query to the
+      -- server. Retry every ~0.5s until it resolves (or we give up after ~10s).
+      if council.itemId and not council.iconResolved then
+        council.iconRetryTick = (council.iconRetryTick or 0) - arg1
+        if council.iconRetryTick <= 0 then
+          council.iconRetryTick = 0.5
+          council.iconRetries = (council.iconRetries or 0) + 1
+          local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
+          if name and icon then
+            f.name:SetText(name)
+            f.icon.tex:SetTexture(icon)
+            council.iconResolved = true
+          elseif council.iconRetries > 20 then
+            council.iconResolved = true -- give up, keep placeholder
+          end
+        end
+      end
+
       local remaining = (tonumber(C.loot.council.duration) or 15) - council.timeElapsed
       f.timer:SetText(remaining > 0 and format("%.1f", remaining) or "0.0")
       if remaining <= 0 then
@@ -526,10 +546,23 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.timeElapsed = 0
             council.isRolling = true
             council.itemLink = link
+
             local _, _, itemId = string.find(link, "(item:%d+:%d+:%d+:%d+)")
+            council.itemId = itemId
+            council.iconResolved = false
+            council.iconRetryTick = 0
+            council.iconRetries = 0
+
             local name, _, _, _, _, _, _, _, icon = GetItemInfo(itemId)
-            f.name:SetText(name or UNKNOWN)
-            f.icon.tex:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+            if name and icon then
+              f.name:SetText(name)
+              f.icon.tex:SetTexture(icon)
+              council.iconResolved = true
+            else
+              f.name:SetText(UNKNOWN)
+              f.icon.tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+            end
+
             UpdateRollsText()
             f:Show()
           end
