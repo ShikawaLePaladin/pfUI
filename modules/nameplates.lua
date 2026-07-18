@@ -145,10 +145,6 @@ pfUI:RegisterModule("nameplates", "vanilla", function ()
     cfg.debuffanim = tonumber(C.nameplates.debuffanim) or 0
     cfg.debufftext = tonumber(C.nameplates.debufftext) or 1
 
-    -- Lootable indicator (SuperWoW 2.0 CanLootUnit). Force-off if the DLL
-    -- function is missing so the OnUpdate check never runs without it.
-    cfg.lootable = (C.nameplates.lootable == "1" and CanLootUnit) and true or nil
-
     -- Rebuild offtanks lookup table
     offtanks = {}
     for k, v in pairs({strsplit("#", C.nameplates.combatofftanks)}) do
@@ -699,7 +695,7 @@ end
     -- PERF: Cache GetTime() once per frame
     frameState.now = now
     frameState.hasTarget, frameState.targetGuid = UnitExists("target")
-    frameState.hasMouseover, frameState.mouseoverGuid = UnitExists("mouseover")
+    frameState.hasMouseover = UnitExists("mouseover")
 
     -- propagate events to all nameplates
     if this.eventcache then
@@ -877,16 +873,6 @@ end
     if C.unitframes.blizzard_raidicons ~= "1" then
       nameplate.raidicon:SetTexture(pfUI.media["img:raidicons"])
     end
-
-    -- Lootable indicator: small coin icon shown on plates of lootable corpses
-    -- (SuperWoW 2.0 CanLootUnit). Anchored to the right of the health bar.
-    nameplate.loot = nameplate:CreateTexture(nil, "OVERLAY")
-    nameplate.loot:SetWidth(14)
-    nameplate.loot:SetHeight(14)
-    nameplate.loot:SetPoint("LEFT", nameplate.health, "RIGHT", 4, 0)
-    nameplate.loot:SetTexture("Interface\\Icons\\INV_Misc_Coin_01")
-    nameplate.loot:SetTexCoord(.08, .92, .08, .92)
-    nameplate.loot:Hide()
 
     nameplate.totem = CreateFrame("Frame", nil, nameplate)
     nameplate.totem:SetPoint("CENTER", nameplate, "CENTER", 0, 0)
@@ -1459,33 +1445,6 @@ end
       end
       nameplate.cachedGuid = guid
       guidRegistry[guid] = frame
-    end
-
-    -- Lootable indicator (SuperWoW 2.0). CanLootUnit only accepts bound unit
-    -- tokens ("target", "mouseover", ...) - NOT a raw GUID, confirmed in-game
-    -- (raw-GUID calls silently returned false; CanLootUnit("target") on an
-    -- actually lootable corpse returns 1). So this can only ever report for
-    -- the plate that is currently targeted or moused-over.
-    -- Throttled to ~0.4s per plate since loot state only changes on death.
-    -- Wrapped in pcall so an unexpected CanLootUnit signature can never break
-    -- the shared nameplate update loop.
-    if cfg.lootable and nameplate.loot then
-      if (nameplate.lootTick or 0) < now then
-        nameplate.lootTick = now + 0.4
-        local unit = nil
-        if state and nameplate.cachedGuid then
-          if nameplate.cachedGuid == state.targetGuid then
-            unit = "target"
-          elseif nameplate.cachedGuid == state.mouseoverGuid then
-            unit = "mouseover"
-          end
-        end
-        local ok, canloot = false, nil
-        if unit then
-          ok, canloot = pcall(CanLootUnit, unit)
-        end
-        if ok and canloot then nameplate.loot:Show() else nameplate.loot:Hide() end
-      end
     end
 
     -- PERF: Intelligent throttling based on target/castbar status and plate count
