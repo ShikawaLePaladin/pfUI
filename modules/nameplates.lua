@@ -699,7 +699,7 @@ end
     -- PERF: Cache GetTime() once per frame
     frameState.now = now
     frameState.hasTarget, frameState.targetGuid = UnitExists("target")
-    frameState.hasMouseover = UnitExists("mouseover")
+    frameState.hasMouseover, frameState.mouseoverGuid = UnitExists("mouseover")
 
     -- propagate events to all nameplates
     if this.eventcache then
@@ -1461,15 +1461,28 @@ end
       guidRegistry[guid] = frame
     end
 
-    -- Lootable indicator (SuperWoW 2.0). Throttled to ~0.4s per plate since loot
-    -- state only changes on death. Wrapped in pcall so an unexpected CanLootUnit
-    -- signature can never break the shared nameplate update loop.
+    -- Lootable indicator (SuperWoW 2.0). CanLootUnit only accepts bound unit
+    -- tokens ("target", "mouseover", ...) - NOT a raw GUID, confirmed in-game
+    -- (raw-GUID calls silently returned false; CanLootUnit("target") on an
+    -- actually lootable corpse returns 1). So this can only ever report for
+    -- the plate that is currently targeted or moused-over.
+    -- Throttled to ~0.4s per plate since loot state only changes on death.
+    -- Wrapped in pcall so an unexpected CanLootUnit signature can never break
+    -- the shared nameplate update loop.
     if cfg.lootable and nameplate.loot then
       if (nameplate.lootTick or 0) < now then
         nameplate.lootTick = now + 0.4
+        local unit = nil
+        if state and nameplate.cachedGuid then
+          if nameplate.cachedGuid == state.targetGuid then
+            unit = "target"
+          elseif nameplate.cachedGuid == state.mouseoverGuid then
+            unit = "mouseover"
+          end
+        end
         local ok, canloot = false, nil
-        if nameplate.cachedGuid then
-          ok, canloot = pcall(CanLootUnit, nameplate.cachedGuid)
+        if unit then
+          ok, canloot = pcall(CanLootUnit, unit)
         end
         if ok and canloot then nameplate.loot:Show() else nameplate.loot:Hide() end
       end
