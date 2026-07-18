@@ -145,7 +145,11 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
     sum_size = 0
     buttons_count = GetNumButtons()
     for i, button_name in ipairs(pfUI.addonbuttons.buttons) do
-      if _G[button_name] ~= nil then
+      -- A global with this name may still exist but no longer be a valid
+      -- frame (its owning addon reloaded/replaced it, or another addon
+      -- reused the name for a non-frame value) - guard for the method too,
+      -- not just non-nil, to avoid "attempt to call method 'GetHeight'".
+      if _G[button_name] ~= nil and _G[button_name].GetHeight then
         sum_size = sum_size + _G[button_name]:GetHeight()
       end
     end
