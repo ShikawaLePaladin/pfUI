@@ -47,6 +47,11 @@ pfUI:RegisterModule("trinketbar", "vanilla:tbc", function ()
 
     b.cd = CreateFrame(COOLDOWN_FRAME_TYPE, b:GetName() .. "Cooldown", b, "CooldownFrameTemplate")
     b.cd:SetAllPoints(b)
+    -- Without these, pfUI's cooldown.lua hook treats this as a "foreign" frame
+    -- (by default: no swipe forced visible, no pfUI countdown text) - matches
+    -- the pattern used by bags.lua/totems.lua/actionbar.lua for their cooldowns.
+    b.cd.pfCooldownStyleAnimation = 1
+    b.cd.pfCooldownType = "ALL"
 
     CreateBackdrop(b)
     CreateBackdropShadow(b)
