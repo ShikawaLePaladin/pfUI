@@ -396,6 +396,18 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
     -- queried yet - full data (icon included) requires the client to have
     -- already resolved the item via a tooltip first. See the SetHyperlink
     -- priming call below, restored from the original LootBlare addon.
+    -- A dedicated hidden probe tooltip, matching the original LootBlare
+    -- addon's exact setup (SetOwner(UIParent, "ANCHOR_PRESERVE")) - proven in
+    -- side-by-side testing to be what actually resolves full item data on
+    -- this server. libtipscan's shared scanner (WorldFrame/"ANCHOR_NONE")
+    -- did NOT reproduce this; the owner/anchor combination seems to matter
+    -- for whatever triggers this server's full item query.
+    local itemProbe = CreateFrame("GameTooltip", "pfLootCouncilItemProbe", UIParent, "GameTooltipTemplate")
+    local function PrimeItemQuery(link)
+      itemProbe:SetOwner(UIParent, "ANCHOR_PRESERVE")
+      itemProbe:SetHyperlink(link)
+    end
+
     local function ResolveItemIcon(itemId)
       if GetItemIcon then
         local icon = GetItemIcon(itemId)
@@ -537,6 +549,7 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
         council.iconRetryTick = (council.iconRetryTick or 0) - arg1
         if council.iconRetryTick <= 0 then
           council.iconRetryTick = 0.5
+          if council.itemLink then PrimeItemQuery(council.itemLink) end
           local name = GetItemInfo(council.itemId)
           local icon = ResolveItemIcon(council.itemId)
           if name and icon then
@@ -603,13 +616,9 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             -- included) for items the client has already fully queried via a
             -- tooltip - called cold, it returns just a lightweight 3-field
             -- result (name/link/quality), confirmed via in-game debug
-            -- logging. The original LootBlare addon primed this by calling
-            -- SetHyperlink() on a hidden tooltip before ever touching
-            -- GetItemInfo; I'd dropped that step while porting. Restore it
-            -- using pfUI's own libtipscan scanner instead of a new tooltip.
-            if pfUI.api.libtipscan then
-              pfUI.api.libtipscan:GetScanner("lootcouncil"):SetHyperlink(link)
-            end
+            -- logging. Prime it exactly like the original LootBlare addon
+            -- did (proven working in side-by-side testing).
+            PrimeItemQuery(link)
 
             local name = GetItemInfo(council.itemId)
             local icon = ResolveItemIcon(council.itemId)
