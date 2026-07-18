@@ -383,6 +383,29 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       return link
     end
 
+    -- Confirmed in-game: GetItemInfo's 1st return (name) resolves fine, but
+    -- the icon did NOT come back at stock vanilla's documented position
+    -- (9th/10th) - it was consistently nil despite the item being fully
+    -- cached (its tooltip rendered completely). Rather than trust a fixed
+    -- offset that's already proven wrong once, try the dedicated GetItemIcon
+    -- API first, then fall back to scanning ALL of GetItemInfo's return
+    -- values for whatever actually looks like a texture path - this works
+    -- regardless of which position this server's GetItemInfo puts it at.
+    local function ResolveItemIcon(itemId)
+      if GetItemIcon then
+        local icon = GetItemIcon(itemId)
+        if icon then return icon end
+      end
+      local rets = { GetItemInfo(itemId) }
+      for i = 1, table.getn(rets) do
+        local v = rets[i]
+        if type(v) == "string" and string.find(v, "^Interface\\") then
+          return v
+        end
+      end
+      return nil
+    end
+
     -- main frame
     local f = CreateFrame("Frame", "pfLootCouncilFrame", UIParent)
     f:SetWidth(200)
@@ -493,13 +516,12 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
         council.iconRetryTick = (council.iconRetryTick or 0) - arg1
         if council.iconRetryTick <= 0 then
           council.iconRetryTick = 0.5
-          local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
+          local name = GetItemInfo(council.itemId)
+          local icon = ResolveItemIcon(council.itemId)
           if name and icon then
             f.name:SetText(name)
             f.icon.tex:SetTexture(icon)
             council.iconResolved = true
-            -- TEMP DIAGNOSTIC - remove once understood.
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r resolved on retry, itemId=" .. tostring(council.itemId))
           end
         end
       end
@@ -564,15 +586,16 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.iconResolved = false
             council.iconRetryTick = 0
 
-            local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
-
-            -- TEMP DIAGNOSTIC - remove once the icon-resolution issue is
-            -- understood. Prints exactly what we extracted and what
-            -- GetItemInfo returned for it, so the next failure gives us real
-            -- data instead of another guess.
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r link=" .. tostring(link)
-              .. " itemId=" .. tostring(council.itemId)
-              .. " name=" .. tostring(name) .. " icon=" .. tostring(icon))
+            -- Confirmed via in-game debug logging: name resolves correctly at
+            -- GetItemInfo's 1st return value, but the icon does NOT come back
+            -- at the position stock vanilla's documented signature would put
+            -- it (9th/10th) - it was consistently nil despite the tooltip
+            -- proving the item was fully cached. Rather than guess a
+            -- different fixed offset blind, use GetItemIcon() - a standalone
+            -- API dedicated to just the icon texture, unaffected by whatever
+            -- GetItemInfo's exact field layout is on this server/client.
+            local name = GetItemInfo(council.itemId)
+            local icon = ResolveItemIcon(council.itemId)
 
             if name and icon then
               f.name:SetText(name)
