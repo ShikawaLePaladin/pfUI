@@ -391,27 +391,24 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
     -- API first, then fall back to scanning ALL of GetItemInfo's return
     -- values for whatever actually looks like a texture path - this works
     -- regardless of which position this server's GetItemInfo puts it at.
+    -- Confirmed in-game: this server's GetItemInfo only returns a lightweight
+    -- 3-field result (name/link/quality) for an item the client hasn't fully
+    -- queried yet - full data (icon included) requires the client to have
+    -- already resolved the item via a tooltip first. See the SetHyperlink
+    -- priming call below, restored from the original LootBlare addon.
     local function ResolveItemIcon(itemId)
       if GetItemIcon then
         local icon = GetItemIcon(itemId)
         if icon then return icon end
       end
 
-      -- Confirmed in-game: this server's GetItemInfo only returns 3 values
-      -- (name, link, quality) - no level/type/icon/etc at all, unlike stock
-      -- vanilla's 11. Nampower exposes its own richer item data via
-      -- GetItemStats(id, true) (already used elsewhere in this file for
-      -- itemLevel) - probe it for an icon-shaped field too.
+      -- Nampower's own item data (GetItemStats) as a secondary fallback -
+      -- its fields are raw item_template DB columns (duration, ammoType,
+      -- displayInfoID, ...), none of which are a usable icon path, but check
+      -- anyway in case a future Nampower version adds one.
       if GetItemStats then
         local ok, stats = pcall(GetItemStats, itemId, true)
         if ok and stats then
-          -- TEMP DIAGNOSTIC - remove once understood. Dumps every key/value
-          -- GetItemStats returned so we stop guessing at the field name.
-          DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r GetItemStats fields:")
-          for k, v in pairs(stats) do
-            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r  " .. tostring(k) .. " = (" .. type(v) .. ") " .. tostring(v))
-          end
-
           for _, key in ipairs({ "icon", "texture", "iconTexture", "itemIcon" }) do
             if type(stats[key]) == "string" and string.find(stats[key], "^Interface\\") then
               return stats[key]
@@ -597,29 +594,28 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.isRolling = true
             council.itemLink = link
 
-            -- GetHyperlink() accepts the full link string, but GetItemInfo()
-            -- proved unreliable with it in testing (tooltip resolved the
-            -- item fine via SetHyperlink while GetItemInfo kept returning
-            -- nil on the same string - likely tripped up by extra fields
-            -- this server's item links carry beyond stock vanilla's). Extract
-            -- just the bare numeric item ID and use that instead: it's the
-            -- simplest form GetItemInfo accepts, with nothing server-specific
-            -- left for it to choke on.
             local _, _, idNum = string.find(link, "item:(%d+)")
             council.itemId = tonumber(idNum)
             council.iconResolved = false
             council.iconRetryTick = 0
 
-            -- Confirmed via in-game debug logging: name resolves correctly at
-            -- GetItemInfo's 1st return value, but the icon does NOT come back
-            -- at the position stock vanilla's documented signature would put
-            -- it (9th/10th) - it was consistently nil despite the tooltip
-            -- proving the item was fully cached. Rather than guess a
-            -- different fixed offset blind, use GetItemIcon() - a standalone
-            -- API dedicated to just the icon texture, unaffected by whatever
-            -- GetItemInfo's exact field layout is on this server/client.
+            -- On this server, GetItemInfo() only returns full data (icon
+            -- included) for items the client has already fully queried via a
+            -- tooltip - called cold, it returns just a lightweight 3-field
+            -- result (name/link/quality), confirmed via in-game debug
+            -- logging. The original LootBlare addon primed this by calling
+            -- SetHyperlink() on a hidden tooltip before ever touching
+            -- GetItemInfo; I'd dropped that step while porting. Restore it
+            -- using pfUI's own libtipscan scanner instead of a new tooltip.
+            if pfUI.api.libtipscan then
+              pfUI.api.libtipscan:GetScanner("lootcouncil"):SetHyperlink(link)
+            end
+
             local name = GetItemInfo(council.itemId)
             local icon = ResolveItemIcon(council.itemId)
+
+            -- TEMP DIAGNOSTIC - remove once confirmed fixed.
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r after priming: name=" .. tostring(name) .. " icon=" .. tostring(icon))
 
             if name and icon then
               f.name:SetText(name)
