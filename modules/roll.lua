@@ -549,17 +549,20 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.isRolling = true
             council.itemLink = link
 
-            -- ExtractItemLink already isolates the clean "item:id:..." string
-            -- (everything between |H and the first |h) - use it directly
-            -- instead of re-extracting a fixed number of ':'-separated
-            -- fields, which can fail on item links with fewer/more fields
-            -- than expected (enchants, gems, unique IDs, server-specific
-            -- extra fields).
-            council.itemId = link
+            -- GetHyperlink() accepts the full link string, but GetItemInfo()
+            -- proved unreliable with it in testing (tooltip resolved the
+            -- item fine via SetHyperlink while GetItemInfo kept returning
+            -- nil on the same string - likely tripped up by extra fields
+            -- this server's item links carry beyond stock vanilla's). Extract
+            -- just the bare numeric item ID and use that instead: it's the
+            -- simplest form GetItemInfo accepts, with nothing server-specific
+            -- left for it to choke on.
+            local _, _, idNum = string.find(link, "item:(%d+)")
+            council.itemId = tonumber(idNum)
             council.iconResolved = false
             council.iconRetryTick = 0
 
-            local name, _, _, _, _, _, _, _, icon = GetItemInfo(link)
+            local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
             if name and icon then
               f.name:SetText(name)
               f.icon.tex:SetTexture(icon)
