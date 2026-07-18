@@ -105,5 +105,23 @@ pfUI:RegisterModule("trinketbar", "vanilla:tbc", function ()
     UpdateAll()
   end)
 
+  -- Trinkets used directly from this bar (rather than from a bag or action
+  -- button) don't reliably fire any of the events above when their cooldown
+  -- starts. The default Blizzard character pane works around this the same
+  -- way: poll GetInventoryItemCooldown periodically instead of relying on
+  -- events alone. Throttled since cooldown state rarely changes.
+  local poll = CreateFrame("Frame")
+  poll:RegisterEvent("PLAYER_LOGOUT")
+  poll:SetScript("OnEvent", function()
+    this:SetScript("OnUpdate", nil)
+    this:UnregisterAllEvents()
+    this:SetScript("OnEvent", nil)
+  end)
+  poll:SetScript("OnUpdate", function()
+    if (this.tick or 0) > GetTime() then return end
+    this.tick = GetTime() + 0.2
+    UpdateAll()
+  end)
+
   UpdateAll()
 end)
