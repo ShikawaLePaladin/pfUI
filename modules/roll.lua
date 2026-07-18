@@ -447,10 +447,13 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       b:SetHeight(20)
       b:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 8 + (i-1)*44, 8)
       b:SetText(cap)
-      b:SetScript("OnClick", function() RandomRoll(1, CAPS[cap].max) end)
+      b.cap = cap
+      b:SetScript("OnClick", function()
+        if this.cap and CAPS[this.cap] then RandomRoll(1, CAPS[this.cap].max) end
+      end)
       b:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_TOP")
-        GameTooltip:SetText((T["Roll for"] or "Roll for") .. " " .. (cap or "?"))
+        GameTooltip:SetText((T["Roll for"] or "Roll for") .. " " .. (this.cap or "?"))
         GameTooltip:Show()
       end)
       b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -483,19 +486,18 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
 
       -- Freshly-seen items are not always cached client-side yet: GetItemInfo
       -- returns nil name/icon until the client finishes an async query to the
-      -- server. Retry every ~0.5s until it resolves (or we give up after ~10s).
+      -- server. Retry every ~0.5s until it resolves - naturally bounded by
+      -- council.isRolling itself (the roll duration timer below), no need
+      -- for a separate attempt cap.
       if council.itemId and not council.iconResolved then
         council.iconRetryTick = (council.iconRetryTick or 0) - arg1
         if council.iconRetryTick <= 0 then
           council.iconRetryTick = 0.5
-          council.iconRetries = (council.iconRetries or 0) + 1
           local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
           if name and icon then
             f.name:SetText(name)
             f.icon.tex:SetTexture(icon)
             council.iconResolved = true
-          elseif council.iconRetries > 20 then
-            council.iconResolved = true -- give up, keep placeholder
           end
         end
       end
@@ -547,13 +549,17 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.isRolling = true
             council.itemLink = link
 
-            local _, _, itemId = string.find(link, "(item:%d+:%d+:%d+:%d+)")
-            council.itemId = itemId
+            -- ExtractItemLink already isolates the clean "item:id:..." string
+            -- (everything between |H and the first |h) - use it directly
+            -- instead of re-extracting a fixed number of ':'-separated
+            -- fields, which can fail on item links with fewer/more fields
+            -- than expected (enchants, gems, unique IDs, server-specific
+            -- extra fields).
+            council.itemId = link
             council.iconResolved = false
             council.iconRetryTick = 0
-            council.iconRetries = 0
 
-            local name, _, _, _, _, _, _, _, icon = GetItemInfo(itemId)
+            local name, _, _, _, _, _, _, _, icon = GetItemInfo(link)
             if name and icon then
               f.name:SetText(name)
               f.icon.tex:SetTexture(icon)
