@@ -396,17 +396,31 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
         local icon = GetItemIcon(itemId)
         if icon then return icon end
       end
-      local rets = { GetItemInfo(itemId) }
 
-      -- TEMP DIAGNOSTIC - remove once the icon-resolution issue is understood.
-      -- Dumps every single value GetItemInfo returned, with its type, so we
-      -- stop guessing at which position/format actually holds the icon.
-      DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r GetItemIcon exists=" .. tostring(GetItemIcon ~= nil)
-        .. " GetItemInfo returned " .. table.getn(rets) .. " values:")
-      for i = 1, table.getn(rets) do
-        DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r  [" .. i .. "] (" .. type(rets[i]) .. ") " .. tostring(rets[i]))
+      -- Confirmed in-game: this server's GetItemInfo only returns 3 values
+      -- (name, link, quality) - no level/type/icon/etc at all, unlike stock
+      -- vanilla's 11. Nampower exposes its own richer item data via
+      -- GetItemStats(id, true) (already used elsewhere in this file for
+      -- itemLevel) - probe it for an icon-shaped field too.
+      if GetItemStats then
+        local ok, stats = pcall(GetItemStats, itemId, true)
+        if ok and stats then
+          -- TEMP DIAGNOSTIC - remove once understood. Dumps every key/value
+          -- GetItemStats returned so we stop guessing at the field name.
+          DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r GetItemStats fields:")
+          for k, v in pairs(stats) do
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r  " .. tostring(k) .. " = (" .. type(v) .. ") " .. tostring(v))
+          end
+
+          for _, key in ipairs({ "icon", "texture", "iconTexture", "itemIcon" }) do
+            if type(stats[key]) == "string" and string.find(stats[key], "^Interface\\") then
+              return stats[key]
+            end
+          end
+        end
       end
 
+      local rets = { GetItemInfo(itemId) }
       for i = 1, table.getn(rets) do
         local v = rets[i]
         if type(v) == "string" and string.find(v, "^Interface\\") then
