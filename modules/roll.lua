@@ -498,6 +498,8 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             f.name:SetText(name)
             f.icon.tex:SetTexture(icon)
             council.iconResolved = true
+            -- TEMP DIAGNOSTIC - remove once understood.
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r resolved on retry, itemId=" .. tostring(council.itemId))
           end
         end
       end
@@ -563,6 +565,15 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             council.iconRetryTick = 0
 
             local name, _, _, _, _, _, _, _, icon = GetItemInfo(council.itemId)
+
+            -- TEMP DIAGNOSTIC - remove once the icon-resolution issue is
+            -- understood. Prints exactly what we extracted and what
+            -- GetItemInfo returned for it, so the next failure gives us real
+            -- data instead of another guess.
+            DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r link=" .. tostring(link)
+              .. " itemId=" .. tostring(council.itemId)
+              .. " name=" .. tostring(name) .. " icon=" .. tostring(icon))
+
             if name and icon then
               f.name:SetText(name)
               f.icon.tex:SetTexture(icon)
