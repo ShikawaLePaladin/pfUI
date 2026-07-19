@@ -408,28 +408,36 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       itemProbe:SetHyperlink(link)
     end
 
-    local function ResolveItemIcon(itemId)
+    local function ResolveItemIcon(itemLinkOrId)
       if GetItemIcon then
-        local icon = GetItemIcon(itemId)
+        local icon = GetItemIcon(itemLinkOrId)
         if icon then return icon end
       end
 
       -- Nampower's own item data (GetItemStats) as a secondary fallback -
       -- its fields are raw item_template DB columns (duration, ammoType,
       -- displayInfoID, ...), none of which are a usable icon path, but check
-      -- anyway in case a future Nampower version adds one.
+      -- anyway in case a future Nampower version adds one. GetItemStats wants
+      -- a plain numeric ID, so extract one even if we were passed a link.
       if GetItemStats then
-        local ok, stats = pcall(GetItemStats, itemId, true)
-        if ok and stats then
-          for _, key in ipairs({ "icon", "texture", "iconTexture", "itemIcon" }) do
-            if type(stats[key]) == "string" and string.find(stats[key], "^Interface\\") then
-              return stats[key]
+        local numericId = tonumber(itemLinkOrId)
+        if not numericId then
+          local _, _, idStr = string.find(tostring(itemLinkOrId), "item:(%d+)")
+          numericId = tonumber(idStr)
+        end
+        if numericId then
+          local ok, stats = pcall(GetItemStats, numericId, true)
+          if ok and stats then
+            for _, key in ipairs({ "icon", "texture", "iconTexture", "itemIcon" }) do
+              if type(stats[key]) == "string" and string.find(stats[key], "^Interface\\") then
+                return stats[key]
+              end
             end
           end
         end
       end
 
-      local rets = { GetItemInfo(itemId) }
+      local rets = { GetItemInfo(itemLinkOrId) }
       for i = 1, table.getn(rets) do
         local v = rets[i]
         if type(v) == "string" and string.find(v, "^Interface\\") then
@@ -545,13 +553,18 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
       -- server. Retry every ~0.5s until it resolves - naturally bounded by
       -- council.isRolling itself (the roll duration timer below), no need
       -- for a separate attempt cap.
-      if council.itemId and not council.iconResolved then
+      if council.itemLink and not council.iconResolved then
         council.iconRetryTick = (council.iconRetryTick or 0) - arg1
         if council.iconRetryTick <= 0 then
           council.iconRetryTick = 0.5
-          if council.itemLink then PrimeItemQuery(council.itemLink) end
-          local name = GetItemInfo(council.itemId)
-          local icon = ResolveItemIcon(council.itemId)
+          PrimeItemQuery(council.itemLink)
+          -- Pass the FULL link, not the bare numeric ID - matches the
+          -- original LootBlare addon exactly (GetItemInfo(itemLinkArg)).
+          -- Untested until now: earlier attempts used either the full link
+          -- WITHOUT priming, or priming WITH the bare ID, never this
+          -- combination.
+          local name = GetItemInfo(council.itemLink)
+          local icon = ResolveItemIcon(council.itemLink)
           if name and icon then
             f.name:SetText(name)
             f.icon.tex:SetTexture(icon)
@@ -616,12 +629,14 @@ pfUI:RegisterModule("roll", "vanilla:tbc", function ()
             -- included) for items the client has already fully queried via a
             -- tooltip - called cold, it returns just a lightweight 3-field
             -- result (name/link/quality), confirmed via in-game debug
-            -- logging. Prime it exactly like the original LootBlare addon
-            -- did (proven working in side-by-side testing).
+            -- logging. Prime it, and pass the FULL link (not the bare
+            -- numeric ID) to GetItemInfo/ResolveItemIcon - matches the
+            -- original LootBlare addon's exact argument type
+            -- (GetItemInfo(itemLinkArg)), untested until now.
             PrimeItemQuery(link)
 
-            local name = GetItemInfo(council.itemId)
-            local icon = ResolveItemIcon(council.itemId)
+            local name = GetItemInfo(link)
+            local icon = ResolveItemIcon(link)
 
             -- TEMP DIAGNOSTIC - remove once confirmed fixed.
             DEFAULT_CHAT_FRAME:AddMessage("|cffff8800[pfUI debug]|r after priming: name=" .. tostring(name) .. " icon=" .. tostring(icon))
