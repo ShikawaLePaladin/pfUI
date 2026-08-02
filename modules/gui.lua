@@ -2343,6 +2343,7 @@ pfUI:RegisterModule("gui", "vanilla:tbc", function ()
         CreateConfig(U[c], T["Debuff Size"], C.unitframes[c], "debuffsize")
         CreateConfig(U[c], T["Debuff Limit"], C.unitframes[c], "debufflimit")
         CreateConfig(U[c], T["Debuffs Per Row"], C.unitframes[c], "debuffperrow")
+        CreateConfig(U[c], T["Show Only Own Debuffs"], C.unitframes[c], "selfdebuff", "checkbox")
 
         if c ~= "player" then
         end
