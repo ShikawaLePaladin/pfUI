@@ -1,6 +1,6 @@
 # pfUI - Turtle WoW Edition
 
-[![Version](https://img.shields.io/badge/version-8.3.0-blue.svg)](https://github.com/me0wg4ming/pfUI)
+[![Version](https://img.shields.io/badge/version-8.4.0-blue.svg)](https://github.com/ShikawaLePaladin/pfUI)
 [![Turtle WoW](https://img.shields.io/badge/Turtle%20WoW-1.18.0-brightgreen.svg)](https://turtlecraft.gg/)
 [![SuperWoW](https://img.shields.io/badge/SuperWoW-Optional-yellow.svg)](https://github.com/balakethelock/SuperWoW)
 [![Nampower](https://img.shields.io/badge/Nampower-Required-purple.svg)](https://gitea.com/avitasia/nampower)
@@ -11,6 +11,57 @@
 This version includes significant performance improvements, DLL-enhanced features, and TBC spell indicators that work with Turtle WoW's expanded spell library.
 
 > **Looking for TBC support?** Visit the original pfUI by Shagu: [https://github.com/shagu/pfUI](https://github.com/shagu/pfUI)
+
+---
+
+## 🎯 What's New in Version 8.4.0 (July 17, 2026)
+
+First release of the **ShikawaLePaladin** continuation of the fork (the previous
+`me0wg4ming/pfUI` repository was taken offline; this build carries the full history forward).
+
+**🎨 Themes (firstrun.lua, env/profiles.lua)**
+- The firstrun "choose profile" step is now a **data-driven button grid** instead of a
+  hardcoded 4-button layout. It automatically shows every built-in profile and resizes
+  the window to fit. Adding a theme is now one list entry + one profile table.
+- **Adapta** and **Light** — two finished profiles that existed in code but were never
+  shown in the wizard — are now offered at install time.
+- New **Carbon** theme: a dark, high-contrast, near-borderless layout derived from Slim.
+  Registered in the `VARIABLES_LOADED` profile loader (required, since `pfUI_profiles`
+  is a SavedVariable) with its own `new_module_positions`.
+- Reminder text now points to the real profile menu path (Settings → General → Profile).
+
+**🎲 Loot Council Roll Coordinator (roll.lua)**
+- Ported from the standalone LootBlare addon: manual `/roll`-based SR/MS/OS/Transmog
+  loot distribution (as used by guilds that don't rely on Blizzard's native group
+  loot), with master-looter sync across the raid via addon messages. Off by default;
+  enable under *Loot → Loot Council Settings*. Uses the real class-color table
+  (fileName-keyed) instead of the original addon's English-only color table, so it
+  now works correctly on non-English clients too. `/pflootcouncil` toggles the window.
+
+**🎯 New module: Trinket Bar (trinketbar.lua)**
+- A small **movable bar showing your two equipped trinkets** with a live cooldown
+  swipe, click-to-use, and hover tooltip. Off by default; enable via
+  *Unit Frames → General → Trinket Bar Settings*. Uses stock 1.12 inventory API
+  (works with or without DLLs) and inherits pfUI's cooldown text/styling; cooldown
+  stays millisecond-accurate through Nampower when present.
+
+**🔌 DLL capability tooling (superwow.lua)**
+- `/pfdll` now **probes and reports the individual API surfaces** each mod exposes
+  (SuperWoW 2.x: `UnitNameplate`, `CursorPosition`, `GetSpeed`, `CanLootUnit`, …;
+  Nampower: `GetSpellRec`, `GetUnitField`, `GetSpellIdCooldown`, `GetSpellModifiers`, …;
+  plus UnitXP_SP3 presence). On a private server (e.g. OctoWoW) this is the quickest way
+  to see which optional mods are actually permitted.
+- New `/pfnpspread` (alias `/pfnameplatespread`) cycles SuperWoW 2.0's `NameplateMotion`
+  CVar — overlap / default / smart / compact spread — to stop nameplates stacking on top
+  of each other. Gated behind `UnitNameplate` (a SuperWoW-2.0 function) so it stays
+  completely inert on older or absent SuperWoW.
+
+**🧹 Fixes / cleanup**
+- README **Requirements** corrected: Nampower is the only hard dependency; SuperWoW and
+  UnitXP_SP3 are optional and feature-detected (the old text wrongly listed SuperWoW as
+  required, contradicting the 8.0.0 notes).
+- In-game clickable links (config website buttons, the libdebuff Nampower-install prompt)
+  repointed from the deleted `me0wg4ming` repo to `ShikawaLePaladin/pfUI`.
 
 ---
 
@@ -1126,19 +1177,21 @@ Master uses **none** of these - it relies on:
 ### Requirements
 
 **REQUIRED:**
-- SuperWoW DLL
-- Nampower DLL
+- [Nampower DLL](https://gitea.com/avitasia/nampower) (3.0.0+) — all cast/aura/spell tracking runs through its API
 
-**Optional but Recommended:**
-- UnitXP_SP3 DLL (for accurate XP tracking)
+**Optional (enhances features when present, gracefully disabled when absent):**
+- [SuperWoW DLL](https://github.com/balakethelock/SuperWoW) — enables extra unit tokens (`mark1-8`, `owner`), unit tracking on the minimap, clickthrough looting, local raid markers, and richer NPC/other-player cast data. Since 8.0.0 it is **no longer a hard dependency**; every SuperWoW code path is feature-detected and simply stays off if the DLL isn't loaded.
+- [UnitXP_SP3 DLL](https://codeberg.org/konaka/UnitXP_SP3) — precise range/distance and line-of-sight checks.
+
+> **Note:** on private servers (e.g. OctoWoW), only DLLs the server explicitly permits will load. Nampower is the only one pfUI hard-requires; SuperWoW and UnitXP just add optional polish.
 
 ### Steps
 
-1. Install SuperWoW + Nampower
-2. Download pfUI Experiment build
+1. Install Nampower (SuperWoW / UnitXP_SP3 optional)
+2. Download this pfUI build
 3. Extract to `Interface/AddOns/pfUI`
 4. `/reload`
-5. Check for errors in console
+5. Check for errors in console (and run `/pfdll` to see which DLLs were detected)
 
 ### Verification
 

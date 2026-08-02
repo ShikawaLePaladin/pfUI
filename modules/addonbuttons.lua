@@ -123,6 +123,17 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
     return false
   end
 
+  -- A tracked button's global name can outlive the actual frame it once
+  -- pointed to (its owning addon reloaded/replaced the frame, or another
+  -- addon reused the same name for a non-frame value). GetObjectType exists
+  -- on every real Blizzard UI widget, so this is a reliable "is this global
+  -- still a usable frame" check - used everywhere this file touches
+  -- _G[button_name] after the initial scan.
+  local function IsValidGlobalFrame(name)
+    local obj = _G[name]
+    return obj and obj.GetObjectType and obj:GetObjectType() ~= nil
+  end
+
   local function FindButtons(frame)
     for i, frame_child in ipairs({frame:GetChildren()}) do
       -- check first level children
@@ -145,7 +156,7 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
     sum_size = 0
     buttons_count = GetNumButtons()
     for i, button_name in ipairs(pfUI.addonbuttons.buttons) do
-      if _G[button_name] ~= nil then
+      if IsValidGlobalFrame(button_name) then
         sum_size = sum_size + _G[button_name]:GetHeight()
       end
     end
@@ -205,7 +216,10 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
       end
     end
     for i, button_name in ipairs(pfUI.addonbuttons.buttons) do
-      if _G[button_name] == nil then
+      -- Prune stale entries here (not just truly-nil ones) so a name that
+      -- exists but no longer resolves to a real frame never reaches the
+      -- backup/move logic below.
+      if not IsValidGlobalFrame(button_name) then
         table.remove(pfUI.addonbuttons.buttons, TableMatch(pfUI.addonbuttons.buttons, button_name))
       end
     end
@@ -252,7 +266,9 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
 
   local function RestoreButton(frame)
     if frame.backup ~= nil then
-      _G[frame.backup.top_frame_name]:SetParent(frame.backup.parent_name)
+      if IsValidGlobalFrame(frame.backup.top_frame_name) then
+        _G[frame.backup.top_frame_name]:SetParent(frame.backup.parent_name)
+      end
       frame:SetClampedToScreen(frame.backup.is_clamped_to_screen)
       frame:SetMovable(frame.backup.is_movable)
       frame:SetScale(frame.backup.scale)
@@ -334,7 +350,7 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
 
     if action == "reset" then
       for i, button_name in ipairs(pfUI_cache["abuttons"]["add"]) do
-        if _G[button_name] ~= nil then
+        if IsValidGlobalFrame(button_name) then
           if TableMatch(pfUI.addonbuttons.buttons, button_name) then
             table.remove(pfUI.addonbuttons.buttons, TableMatch(pfUI.addonbuttons.buttons, button_name))
           end
@@ -389,7 +405,7 @@ pfUI:RegisterModule("addonbuttons", "vanilla:tbc", function ()
 
     local i = 1
     for _, button_name in ipairs(pfUI.addonbuttons.buttons) do
-      if _G[button_name] and _G[button_name]:IsVisible() then
+      if IsValidGlobalFrame(button_name) and _G[button_name]:IsVisible() then
         BackupButton(_G[button_name])
         MoveButton(i, _G[button_name])
         i = i + 1

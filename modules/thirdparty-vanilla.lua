@@ -1031,6 +1031,31 @@ pfUI:RegisterModule("thirdparty-vanilla", "vanilla", function()
     end
   end)
 
+  HookAddonOrVariable("OctoMeter", function()
+    if C.thirdparty.octometer.enable == "0" then return end
+    if not OctoMeter_Database or not OctoMeter_Window then return end
+
+    -- OctoMeter manages its own multi-window layout, resizing and magnet
+    -- snapping - unlike DPSMate's single fixed-name scroll list, it can't be
+    -- reparented/docked into pfUI.chat.right without fighting that system.
+    -- So instead of docking, just push pfUI's current border/background
+    -- colors into OctoMeter's own theme settings so it blends in visually
+    -- while staying a fully independent, self-managed window. OctoMeter
+    -- already ships its own minimap button (picked up automatically by
+    -- pfUI's addon button organizer), so no extra toggle button is needed.
+    local br, bg, bb = pfUI.api.GetStringColor(C.appearance.border.color)
+    local pr, pg, pb, pa = pfUI.api.GetStringColor(C.appearance.border.background)
+
+    OctoMeter_Database:SetSetting("borderColor", {
+      r = tonumber(br) or 0.3, g = tonumber(bg) or 0.3, b = tonumber(bb) or 0.35,
+    })
+    OctoMeter_Database:SetSetting("bgColor", {
+      r = tonumber(pr) or 0, g = tonumber(pg) or 0, b = tonumber(pb) or 0, a = tonumber(pa) or 0.9,
+    })
+
+    OctoMeter_Window:ApplyThemeToAll()
+  end)
+
   HookAddonOrVariable("MyRolePlay", function()
     if C.thirdparty.myroleplay.enable == "0" then return end
 

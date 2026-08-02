@@ -1446,7 +1446,7 @@ end
       nameplate.cachedGuid = guid
       guidRegistry[guid] = frame
     end
-    
+
     -- PERF: Intelligent throttling based on target/castbar status and plate count
     -- Use GUID comparison as primary target detection: instant, immune to alpha transitions,
     -- and immediately correct on de-target (unlike istarget which updates one tick later)
