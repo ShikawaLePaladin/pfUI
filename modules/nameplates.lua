@@ -124,6 +124,7 @@ pfUI:RegisterModule("nameplates", "vanilla", function ()
     cfg.showdebuffs = C.nameplates["showdebuffs"] == "1"
     cfg.showdebuffs_hostile = C.nameplates["showdebuffs_hostile"] == "1"
     cfg.showdebuffs_friendly = C.nameplates["showdebuffs_friendly"] == "1"
+    cfg.selfdebuff = C.nameplates["selfdebuff"] == "1"
     cfg.targetzoom = C.nameplates.targetzoom == "1"
     cfg.zoomval = (tonumber(C.nameplates.targetzoomval) or 0.4) + 1
     cfg.width = tonumber(C.nameplates.width) or 120
@@ -428,9 +429,9 @@ pfUI:RegisterModule("nameplates", "vanilla", function ()
       end)
     else
       for id = 1, 16 do
-        local effect, _, texture, stacks, _, duration, timeleft
-        effect, _, texture, stacks, _, duration, timeleft = libdebuff:UnitDebuff(unitstr, id)
-        if effect and timeleft and timeleft > 0 then
+        local effect, _, texture, stacks, _, duration, timeleft, caster
+        effect, _, texture, stacks, _, duration, timeleft, caster = libdebuff:UnitDebuff(unitstr, id)
+        if effect and timeleft and timeleft > 0 and (not cfg.selfdebuff or caster == "player") then
           local start = now - ( (duration or 0) - ( timeleft or 0) )
           local stop = now + timeleft
           self.debuffcache[id] = self.debuffcache[id] or {}
@@ -1335,9 +1336,10 @@ end
         debuffCount = _iterDebuffCount
       elseif unitstr and libdebuff then
         for i = 1, 16 do
-          local effect, rank, texture, stacks, dtype, duration, timeleft
-          effect, rank, texture, stacks, dtype, duration, timeleft = libdebuff:UnitDebuff(unitstr, i)
-          if effect then
+          local effect, rank, texture, stacks, dtype, duration, timeleft, caster
+          effect, rank, texture, stacks, dtype, duration, timeleft, caster = libdebuff:UnitDebuff(unitstr, i)
+          -- "Show Only Own Debuffs": caster is "player" only for our own casts
+          if effect and (not cfg.selfdebuff or caster == "player") then
             debuffCount = debuffCount + 1
             local b = debuffDisplayBuf[debuffCount]
             b.effect, b.texture, b.stacks, b.dtype, b.duration, b.timeleft = effect, texture, stacks, dtype, duration, timeleft

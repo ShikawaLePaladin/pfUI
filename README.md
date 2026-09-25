@@ -14,6 +14,20 @@ This version includes significant performance improvements, DLL-enhanced feature
 
 ---
 
+## 🎯 Unreleased
+
+**"Show Only Own Debuffs" is back on unit frames + nameplates** (gui.lua, nameplates.lua, config.lua)
+
+mostly for warlocks (or anyone stacking DoTs on a mob together with other casters): you only want to see YOUR dots on the target, not the 10 curses/corruptions from everybody else
+
+- unit frames: new checkbox in each unit frame's Debuffs section (Unit Frames > Target > Debuffs etc). the filter logic in api/unitframes.lua (`selfdebuff` → `libdebuff:UnitOwnDebuff`) was never removed, only the checkbox was - so this just exposes it again
+- nameplates: new checkbox under Nameplates > Debuffs. the old implementation (UnitOwnDebuff per slot) was removed in 8.3.0 together with the aura cache. re-added it in a cheaper way: the normal `libdebuff:UnitDebuff` loop already returns `caster` as its 8th value (`"player"` for our own casts via GetSlotCaster), so we just skip anything where caster ~= "player". no extra tables, no sorting, real slot data (stacks stay correct). applied to both the live loop and the "Estimate Debuffs" cache so plates without a unitstr stay consistent
+- config.lua: removed the migration that forced `selfdebuff = "0"` on unit frames + nameplates. it wasnt version-gated so it ran on EVERY login/reload - meaning the checkbox would untick itself after each /reload
+
+how to check ingame: tick the option on Target, have another warlock (or a dummy with someone else's debuff) dot the same mob → only your dots should show. /reload → checkbox should stay ticked. same test for nameplates. swap targets quickly a few times to make sure no stale icons from the previous target show up
+
+---
+
 ## 🎯 Whats new in 8.3.0 (March 28, 2026)
 
 **Nameplate castbars** (nameplates.lua, castbar.lua)

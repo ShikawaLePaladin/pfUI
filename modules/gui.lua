@@ -2339,6 +2339,7 @@ pfUI:RegisterModule("gui", "vanilla:tbc", function ()
         CreateConfig(U[c], T["Debuff Size"], C.unitframes[c], "debuffsize")
         CreateConfig(U[c], T["Debuff Limit"], C.unitframes[c], "debufflimit")
         CreateConfig(U[c], T["Debuffs Per Row"], C.unitframes[c], "debuffperrow")
+        CreateConfig(U[c], T["Show Only Own Debuffs"], C.unitframes[c], "selfdebuff", "checkbox")
 
         if c ~= "player" then
         end
@@ -2899,6 +2900,7 @@ pfUI:RegisterModule("gui", "vanilla:tbc", function ()
       CreateConfig(U["nameplates"], T["Enable Debuffs"], C.nameplates, "showdebuffs", "checkbox")
       CreateConfig(U["nameplates"], T["Show Debuffs on Hostile"], C.nameplates, "showdebuffs_hostile", "checkbox")
       CreateConfig(U["nameplates"], T["Show Debuffs on Friendly"], C.nameplates, "showdebuffs_friendly", "checkbox")
+      CreateConfig(U["nameplates"], T["Show Only Own Debuffs"], C.nameplates, "selfdebuff", "checkbox")
       CreateConfig(U["nameplates"], T["Debuff Position"], C.nameplates.debuffs, "position", "dropdown", pfUI.gui.dropdowns.debuffposition)
       CreateConfig(U["nameplates"], T["Debuff Icon Offset"], C.nameplates, "debuffoffset")
       CreateConfig(U["nameplates"], T["Debuff Icon Size"], C.nameplates, "debuffsize")
