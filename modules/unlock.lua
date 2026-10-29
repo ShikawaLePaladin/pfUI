@@ -348,14 +348,17 @@ pfUI:RegisterModule("unlock", "vanilla:tbc", function ()
 
     -- calculate and move selection offsets
     local anchor, xpos, ypos = ConvertFrameAnchor(frame, frame.oldPos[3])
-    local diffxpos = frame.oldPos[1] - xpos
-    local diffypos = frame.oldPos[2] - ypos
+    -- a frame whose start position could not be read (no anchor point yet) would raise "arithmetic on a nil value" here
+    local diffxpos = (frame.oldPos[1] or xpos or 0) - (xpos or 0)
+    local diffypos = (frame.oldPos[2] or ypos or 0) - (ypos or 0)
 
     for id, frame in pairs(pfUI.unlock.selection) do
       frame:SetParent("UIParent")
       if frame:GetName() ~= name then
         local anchor, _, _, xpos, ypos = frame:GetPoint()
-        frame:SetPoint(anchor or "TOPLEFT", xpos - diffxpos, ypos - diffypos)
+        if xpos and ypos then
+          frame:SetPoint(anchor or "TOPLEFT", xpos - diffxpos, ypos - diffypos)
+        end
       end
     end
 
